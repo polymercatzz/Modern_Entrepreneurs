@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Applied AI Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-code">06016474</span>
+      <span class="brand-name">Applied AI for IT · ทบทวนก่อนสอบ</span>
+    </div>
+    <button id="themeToggle" class="icon-btn" type="button" aria-label="สลับธีมสว่าง/มืด">
+      <span class="icon-sun">☀</span><span class="icon-moon">☾</span>
+    </button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="บทเรียน">
+    <button class="tab active" data-target="home" role="tab">ภาพรวม</button>
+    <button class="tab" data-target="w10" role="tab">W10 Caching</button>
+    <button class="tab" data-target="w11" role="tab">W11 Session State</button>
+    <button class="tab" data-target="l12" role="tab">Lab 12 Supabase</button>
+    <button class="tab" data-target="w13" role="tab">W13 Deploy</button>
+  </nav>
+
+  <main>
+    <!-- ================= HOME ================= -->
+    <section id="home" class="panel active">
+      <h1>ทบทวน 4 บทเรียนก่อนสอบ</h1>
+      <p class="lead">แต่ละบทมีสรุปเนื้อหาและข้อสอบ 10 ข้อ (ปรนัย อ่านโค้ด และหาจุดผิด) ตรวจคำตอบพร้อมเฉลยทันทีที่เลือก คะแนนจะถูกจำไว้ในเบราว์เซอร์นี้</p>
+
+      <div id="progressGrid" class="progress-grid"></div>
+
+      <h2>แก่นที่เชื่อมทุกบท</h2>
+      <div class="flow">
+        <div class="flow-step"><b>Rerun</b><span>ทุก interaction รันสคริปต์ใหม่ทั้งไฟล์</span></div>
+        <div class="flow-step"><b>Cache</b><span>“ใช้งานเดิมซ้ำได้ไหม?”<br>ใช้ร่วมกันทุก session</span></div>
+        <div class="flow-step"><b>Session State</b><span>“จำ workflow ของผู้ใช้คนนี้”<br>อยู่จนปิดแท็บ</span></div>
+        <div class="flow-step"><b>Database</b><span>ข้อมูลถาวร ข้ามการเข้าใช้หลายครั้ง</span></div>
+        <div class="flow-step"><b>Deploy</b><span>ทำให้คนอื่นใช้ได้ผ่าน Public URL</span></div>
+      </div>
+
+      <div class="actions">
+        <button id="resetAll" class="btn ghost" type="button">ล้างคะแนนทั้งหมด</button>
+      </div>
+    </section>
+
+    <!-- ================= WEEK 10 ================= -->
+    <section id="w10" class="panel">
+      <div class="lesson-head">
+        <p class="eyebrow">Week 10</p>
+        <h1>Caching and Efficient Model Integration</h1>
+        <div class="subtabs">
+          <button class="subtab active" data-view="summary">สรุป</button>
+          <button class="subtab" data-view="quiz">ข้อสอบ <span class="badge" data-badge="w10"></span></button>
+        </div>
+      </div>
+
+      <div class="view summary active">
+        <div class="card">
+          <h2>ปัญหา: Rerun ทำงานซ้ำ</h2>
+          <p>Streamlit รันไฟล์ Python ใหม่ตั้งแต่บนลงล่างทุกครั้งที่ผู้ใช้กด widget หรือแก้ source code งานช้าอย่าง <code>load_model()</code> จึงถูกรันซ้ำทุกรอบ แม้โมเดลไม่ได้เปลี่ยน</p>
+          <p>งานที่ควร cache: อ่านไฟล์ใหญ่ (CSV/Excel/JSON), เรียก API/database, เตรียม AI tools (model, tokenizer, embeddings)</p>
+          <div class="callout">Cache งานที่ <b>แพง</b> และ <b>คงที่พอ</b> จะใช้ซ้ำข้าม rerun ได้</div>
+        </div>
+
+        <div class="card">
+          <h2>Cache hit / Cache miss</h2>
+          <div class="two-col">
+            <div class="mini ok"><b>CACHE HIT</b><br>มี entry ที่ตรงกัน → คืนค่าที่เก็บไว้ ตัวฟังก์ชัน <u>ไม่ถูกรัน</u></div>
+            <div class="mini warn"><b>CACHE MISS</b><br>ไม่มี entry → รันฟังก์ชัน แล้วเก็บผลลัพธ์ไว้</div>
+          </div>
+<pre><code class="py">@st.cache_data
+def slow_square(x):
+    time.sleep(3)
+    return x * x
+
+slow_square(5)  # MISS → คำนวณ 25 แล้วเก็บ
+slow_square(5)  # HIT
+slow_square(7)  # MISS → คำนวณ 49 แล้วเก็บ
+slow_square(5)  # HIT</code></pre>
+          <p>ฟังก์ชันเดียวเก็บได้ <b>หลาย entry</b> แยกตาม cache identity</p>
+          <div class="callout danger">Cache ข้ามแค่ <b>ตัวฟังก์ชัน</b> ที่ cache ไว้ ไม่ได้ข้ามการ rerun ส่วนอื่นของสคริปต์ยังรันใหม่ทั้งหมด</div>
+        </div>
+
+        <div class="card">
+          <h2>Cache identity: เมื่อไรจะ hit</h2>
+          <ol>
+            <li>เป็นฟังก์ชันที่ decorate ตัวเดิม</li>
+            <li>argument ตรงกับที่เคยเรียก (ยกเว้น parameter ที่ตั้งใจละไว้)</li>
+            <li>source code ของฟังก์ชันไม่ถูกแก้</li>
+          </ol>
+          <p>ข้อใดข้อหนึ่งเปลี่ยน → cache miss → สร้าง entry ใหม่</p>
+        </div>
+
+        <div class="card">
+          <h2>cache_data vs cache_resource</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th></th><th><code>@st.cache_data</code></th><th><code>@st.cache_resource</code></th></tr></thead>
+            <tbody>
+              <tr><td>ใช้กับ</td><td>DataFrame, array, dict, list, str, ตัวเลข, ผลจาก API</td><td>ML model, DB connection, engine, handle ที่ใช้ร่วมกัน</td></tr>
+              <tr><td>ผู้เรียกได้</td><td><b>สำเนา</b> ของตัวเอง (serialize/deserialize)</td><td><b>object ตัวเดียวกัน</b> ไม่มีการ copy</td></tr>
+              <tr><td>แก้ไข object</td><td>ไม่กระทบคนอื่น</td><td>ทุก session เห็นการแก้ไข</td></tr>
+              <tr><td>ข้อควรระวัง</td><td>ข้อมูลอาจเก่า (stale)</td><td>ต้อง thread-safe, ห้าม mutate แบบไม่ปลอดภัย</td></tr>
+            </tbody>
+          </table></div>
+<pre><code class="py">@st.cache_resource
+def get_numbers():
+    return [1, 2, 3]
+
+numbers = get_numbers()
+numbers.remove(1)
+# รอบแรก: object ที่แชร์กลายเป็น [2, 3]
+# rerun ถัดไป: ได้ object เดิม [2, 3] → remove(1)
+# ValueError: 1 is not in list</code></pre>
+          <p class="muted">คำถามที่ใช้ตัดสิน: ผู้เรียกควรได้ผลลัพธ์ที่แยกกัน หรือตั้งใจใช้ object เดียวร่วมกัน?</p>
+        </div>
+
+        <div class="card">
+          <h2>Hashing และ underscore</h2>
+<pre><code class="py">@st.cache_data
+def fetch_data(_db_connection, num_rows):
+    return _db_connection.fetch(num_rows)
+# _db_connection ไม่นับเป็น cache key
+# num_rows นับเป็น cache key</code></pre>
+          <p>parameter ต้อง hashable เพื่อใช้เป็น key ถ้า hash ไม่ได้ให้ใส่ <code>_</code> นำหน้า <b>แต่</b> อย่าละ parameter ที่มีผลต่อผลลัพธ์</p>
+        </div>
+
+        <div class="card">
+          <h2>Advanced: ความสดของข้อมูลและหน่วยความจำ</h2>
+          <ul>
+            <li><code>ttl=3600</code> หรือ <code>ttl=datetime.timedelta(hours=1)</code> → entry หมดอายุแล้วรันใหม่ (แก้ปัญหาข้อมูลเก่า)</li>
+            <li><code>max_entries=1000</code> → จำกัด <b>จำนวน</b> entry เมื่อเต็มจะลบอันเก่าสุดออก (ไม่ได้คุมขนาดเป็นไบต์)</li>
+            <li><code>show_spinner=False</code> สำหรับงานเร็ว หรือ <code>show_spinner="Fetching data..."</code> เพื่อบอกผู้ใช้ตอน miss</li>
+            <li><code>load_data.clear()</code> ล้างเฉพาะฟังก์ชันนั้น, <code>st.cache_data.clear()</code> / <code>st.cache_resource.clear()</code> ล้างทั้งประเภท</li>
+          </ul>
+<pre><code class="py">@st.cache_data
+def load_data(path, file_mtime):
+    return pd.read_csv(path)
+
+mtime = os.path.getmtime("data.csv")
+df = load_data("data.csv", mtime)  # ไฟล์เปลี่ยน → mtime เปลี่ยน → miss</code></pre>
+          <div class="callout">ถ้าแหล่งข้อมูลจริงเปลี่ยน ให้ทำให้การเปลี่ยนนั้นปรากฏใน <b>input ของฟังก์ชัน</b></div>
+        </div>
+
+        <div class="card">
+          <h2>ควร cache หรือไม่</h2>
+          <div class="two-col">
+            <div class="mini ok"><b>ควร</b><br>อ่านไฟล์/DB/API ที่แพง (มีกฎความสด) · transformation ที่แพงและ input ซ้ำ · โหลดโมเดลที่ใช้ซ้ำ<br><i>อาจจะ:</i> prediction ที่ request ซ้ำกันจริง</div>
+            <div class="mini warn"><b>ไม่ควร</b><br>เลขคณิตง่ายๆ · input ไม่ซ้ำแทบทุกครั้ง · state ของผู้ใช้ที่เปลี่ยนได้ · งานที่มี side effect ต้องเกิดทุกครั้ง</div>
+          </div>
+          <p class="muted">ถามสองข้อ: ใช้ซ้ำแล้วประหยัดจริงไหม? ใช้ซ้ำแล้วยังถูกต้องไหม?</p>
+        </div>
+      </div>
+
+      <div class="view quiz" data-quiz="w10"></div>
+    </section>
+
+    <!-- ================= WEEK 11 ================= -->
+    <section id="w11" class="panel">
+      <div class="lesson-head">
+        <p class="eyebrow">Week 11</p>
+        <h1>Session State and Stateful Interaction</h1>
+        <div class="subtabs">
+          <button class="subtab active" data-view="summary">สรุป</button>
+          <button class="subtab" data-view="quiz">ข้อสอบ <span class="badge" data-badge="w11"></span></button>
+        </div>
+      </div>
+
+      <div class="view summary active">
+        <div class="card">
+          <h2>Session คืออะไร</h2>
+          <p><b>1 แท็บเบราว์เซอร์ = 1 session</b> คือการเชื่อมต่อหนึ่งครั้งระหว่างแท็บกับแอป server และแอปใช้ร่วมกัน แต่ <code>st.session_state</code> ของแต่ละ session แยกกัน เปิดแท็บใหม่ = state ใหม่</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th></th><th>Session State</th><th>Cache</th></tr></thead>
+            <tbody>
+              <tr><td>Scope</td><td>หนึ่ง browser session</td><td>ใช้ร่วมกันทุก session บน app/server เดียวกัน</td></tr>
+              <tr><td>จุดประสงค์</td><td>จำค่าของผู้ใช้ที่เปลี่ยนไปเรื่อยๆ</td><td>ใช้ผลงานที่แพงและคงที่ซ้ำ</td></tr>
+              <tr><td>อายุ</td><td>หายเมื่อ session จบหรือถูก reset</td><td>อยู่จนถูกล้าง หมดอายุ หรือ invalidate</td></tr>
+            </tbody>
+          </table></div>
+          <p>ใช้กับ: ประวัติแชท, ขั้นตอนของ workflow, ตัวเลือก/filter/draft ชั่วคราว</p>
+        </div>
+
+        <div class="card">
+          <h2>ตัวแปรธรรมดาถูกรีเซ็ตทุก rerun</h2>
+          <div class="two-col">
+<pre><code class="py"># ไม่มี session state
+count = 0
+if st.button("Add 1"):
+    count += 1
+st.write("Count:", count)
+# กดกี่ครั้งก็แสดง 1</code></pre>
+<pre><code class="py"># มี session state
+if "count" not in st.session_state:
+    st.session_state.count = 0
+if st.button("Add 1"):
+    st.session_state.count += 1
+st.write("Count =", st.session_state.count)</code></pre>
+          </div>
+          <div class="callout">Initialize <b>ครั้งเดียว</b> ด้วย <code>if "key" not in st.session_state</code> แล้วอ่าน/แก้ผ่าน <code>st.session_state</code></div>
+        </div>
+
+        <div class="card">
+          <h2>ใช้เหมือน dictionary</h2>
+<pre><code class="py">st.session_state["count"] = 0      # dictionary syntax
+st.session_state.count = 0         # attribute syntax
+st.session_state["count"] += 1     # update
+del st.session_state["count"]      # delete
+for key in list(st.session_state.keys()):
+    del st.session_state[key]      # ล้างทุก key</code></pre>
+          <p class="muted">dictionary syntax อ่านง่ายกว่าเวลาวนลูป ลบ หรือตรวจ key</p>
+        </div>
+
+        <div class="card">
+          <h2>Widget key</h2>
+<pre><code class="py">st.text_input("Your name", key="name")
+st.slider("Level", 1, 10, key="level")
+st.write(st.session_state["name"])   # ค่าเดียวกับ widget</code></pre>
+          <p>ใส่ <code>key</code> แล้วค่าของ widget จะถูกเขียนลง Session State อัตโนมัติ ต้องตั้งค่าเริ่มต้นใน state <b>ก่อน</b> สร้าง widget</p>
+<pre><code class="py">if "celsius" not in st.session_state:
+    st.session_state.celsius = 50.0
+st.slider("Temperature", min_value=-100.0, max_value=100.0, key="celsius")</code></pre>
+        </div>
+
+        <div class="card">
+          <h2>Callbacks</h2>
+          <p class="flow-inline">ผู้ใช้เปลี่ยน widget → <b>callback รัน</b> → state ถูกอัปเดต → สคริปต์ rerun</p>
+<pre><code class="py">def increment_counter():
+    st.session_state.count += 1
+
+st.button("Increment", on_click=increment_counter)    # ✓ ส่งฟังก์ชัน
+st.button("Increment", on_click=increment_counter())  # ✗ เรียกทันทีทุก rerun</code></pre>
+          <ul>
+            <li><code>on_click</code> สำหรับปุ่ม, <code>on_change</code> สำหรับ text_input, slider, selectbox, checkbox</li>
+            <li>ส่งค่าคงที่ด้วย <code>args</code> / <code>kwargs</code> และอ่านค่า widget ใน callback ผ่าน <code>st.session_state</code></li>
+            <li>ใน <code>st.form</code> callback ต้องอยู่ที่ <code>st.form_submit_button(..., on_click=...)</code></li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Error ที่พบบ่อย</h2>
+          <ol class="errors">
+            <li><b>อ่าน key ก่อนสร้าง</b> → exception ให้ initialize ก่อน</li>
+            <li><b>แก้ state หลังสร้าง widget</b> → <code>StreamlitAPIException: ... cannot be modified after the widget with key ... is instantiated</code></li>
+            <li><b>ตั้งค่าเริ่มต้นซ้อนสองที่</b> (state = 7 และ <code>value=5</code>) → warning ให้เลือกแหล่งเดียว</li>
+            <li><b>ตั้งค่า state ของ button</b> → error เพราะ button เป็น True แค่ rerun เดียว ให้เก็บ <i>ผลลัพธ์</i> แทน</li>
+          </ol>
+<pre><code class="py">if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+if st.button("Submit"):
+    st.session_state.submitted = True   # เก็บผลลัพธ์ ไม่ใช่สถานะปุ่ม</code></pre>
+        </div>
+
+        <div class="card">
+          <h2>อายุของ session และการใช้คู่กับ cache</h2>
+          <ul>
+            <li>แท็บเดิม interaction ปกติ → state อยู่ต่อ</li>
+            <li>แท็บใหม่/ผู้ใช้ใหม่ → session ใหม่ state ใหม่</li>
+            <li>Reload/connection reset → state อาจหายเพราะ WebSocket เปลี่ยน</li>
+          </ul>
+<pre><code class="py">@st.cache_resource
+def load_model():
+    return create_model()        # ใช้ร่วมกันทุกคน
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []   # แยกต่อ session</code></pre>
+          <div class="callout">Session State คือหน่วยความจำชั่วคราวต่อ session <b>ไม่ใช่ database</b> ใครควรเห็น? อยู่ได้นานแค่ไหน?</div>
+        </div>
+      </div>
+
+      <div class="view quiz" data-quiz="w11"></div>
+    </section>
+
+    <!-- ================= LAB 12 ================= -->
+    <section id="l12" class="panel">
+      <div class="lesson-head">
+        <p class="eyebrow">Lab 12</p>
+        <h1>Connecting to Database (Supabase)</h1>
+        <div class="subtabs">
+          <button class="subtab active" data-view="summary">สรุป</button>
+          <button class="subtab" data-view="quiz">ข้อสอบ <span class="badge" data-badge="l12"></span></button>
+        </div>
+      </div>
+
+      <div class="view summary active">
+        <div class="card">
+          <h2>Supabase คืออะไร</h2>
+          <p>แพลตฟอร์ม <b>Backend-as-a-Service (BaaS)</b> แบบ open-source ที่สร้างบน <b>PostgreSQL</b> ช่วยให้สร้าง backend ได้เร็วโดยไม่ต้องเขียนโครงสร้างพื้นฐานเอง</p>
+          <h3>ข้อดี</h3>
+          <ul>
+            <li><b>Relational:</b> PostgreSQL เต็มรูปแบบ รองรับข้อมูลที่สัมพันธ์ซับซ้อน (SQL) ยืดหยุ่นกว่า NoSQL</li>
+            <li><b>ลดเวลาเขียน API:</b> สร้าง REST และ GraphQL API ให้อัตโนมัติตาม Database Schema</li>
+            <li><b>ไม่มี Vendor Lock-in:</b> open-source, self-host หรือย้าย cloud ได้</li>
+            <li><b>Row-Level Security (RLS)</b> ของ PostgreSQL ควบคุมสิทธิ์ละเอียด</li>
+            <li><b>รองรับ AI:</b> ส่วนขยาย <code>pgvector</code> เก็บ/ค้นหา vector สำหรับ RAG</li>
+          </ul>
+          <h3>ฟีเจอร์หลัก</h3>
+          <div class="chips">
+            <span>Database (PostgreSQL)</span><span>Authentication (อีเมล/รหัสผ่าน, OAuth: Google, GitHub)</span><span>Storage</span><span>Realtime (WebSockets)</span><span>Edge Functions (Serverless)</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>สร้างโปรเจคและตาราง</h2>
+          <ul>
+            <li>Project: <code>lab12_database_connection</code>, Region: Singapore (ใกล้ที่สุด), เปิด <b>Enable Data API</b></li>
+            <li>ตาราง <code>helpdesk_tickets</code> จาก <code>helpdesk_tickets_timestamped.csv</code>: <b>ticket_id</b> = Primary key, <b>created_at</b> = timestamp</li>
+            <li>ตาราง <code>helpdesk_validation</code> จาก <code>helpdesk_validation_queries.csv</code>: <b>query_id</b> = Primary key</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Row-Level Security (RLS)</h2>
+          <p>กลไกของ PostgreSQL ควบคุมสิทธิ์ <b>ระดับแถว (row)</b> ผ่าน <b>Policy</b> ว่าผู้ใช้แต่ละประเภททำ <code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code> แถวไหนได้ เช่น ให้ผู้ใช้เห็นเฉพาะข้อมูลตัวเอง หรือให้แอดมินเห็นทั้งหมด</p>
+          <div class="callout">ใน Lab <b>ปิด RLS</b> เพราะยังไม่ใช้ Authentication และเป็นข้อมูลจำลอง เพื่อโฟกัสที่การเชื่อมต่อและ query<br>ระบบจริงที่มีผู้ใช้หลายประเภท <b>ควรเปิด RLS</b> และกำหนด Policy ให้เหมาะสม</div>
+        </div>
+
+        <div class="card">
+          <h2>เชื่อม Streamlit กับ Supabase</h2>
+          <div class="two-col">
+            <div class="mini ok"><b>ใช้: Publishable key</b><br><code>sb_publishable_...</code></div>
+            <div class="mini warn"><b>ห้ามใช้: Secret key / Service Role key</b><br><code>sb_secret_...</code> มีสิทธิ์สูง <b>ข้าม RLS ได้</b></div>
+          </div>
+          <p>เก็บค่าไว้ใน <code>.streamlit/secrets.toml</code> เพื่อแยก configuration ออกจาก source code (ถ้าไม่มีไฟล์ให้สร้างเอง)</p>
+<pre><code class="toml"># .streamlit/secrets.toml
+supabase_url = "https://xxxxxxxxxxxxxxxxxxxx.supabase.co"
+supabase_key = "sb_publishable_..."</code></pre>
+          <ul>
+            <li>Key: <b>Project Settings &gt; API Keys</b></li>
+            <li>URL: <b>Integration &gt; Data API</b> (ห้ามแชร์)</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>ให้สิทธิ์อ่านกับ role anon</h2>
+<pre><code class="sql">GRANT SELECT ON TABLE
+  public.helpdesk_tickets,
+  public.helpdesk_validation
+TO anon;</code></pre>
+          <p>ผู้ใช้ไม่ระบุตัวตน (anon) ซึ่งเชื่อมต่อด้วย publishable key จะ <b>อ่าน (SELECT) ได้อย่างเดียว</b> ทั้งสองตาราง รันใน <b>SQL Editor</b></p>
+        </div>
+      </div>
+
+      <div class="view quiz" data-quiz="l12"></div>
+    </section>
+
+    <!-- ================= WEEK 13 ================= -->
+    <section id="w13" class="panel">
+      <div class="lesson-head">
+        <p class="eyebrow">Week 13</p>
+        <h1>Deploying Streamlit Applications</h1>
+        <div class="subtabs">
+          <button class="subtab active" data-view="summary">สรุป</button>
+          <button class="subtab" data-view="quiz">ข้อสอบ <span class="badge" data-badge="w13"></span></button>
+        </div>
+      </div>
+
+      <div class="view summary active">
+        <div class="card">
+          <h2>Deploy ต้องมีอะไรบ้าง</h2>
+          <p class="flow-inline">Code → GitHub → Streamlit Community Cloud → Public URL → ผู้ใช้จริง</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ส่วนประกอบ</th><th>บอกอะไร</th><th>ตัวอย่าง</th></tr></thead>
+            <tbody>
+              <tr><td>Application Code</td><td>จะรันอะไร</td><td><code>main.py</code>, <code>training.py</code></td></tr>
+              <tr><td>Dependencies</td><td>ต้องติดตั้ง library อะไร</td><td><code>requirements.txt</code></td></tr>
+              <tr><td>Configuration / Secrets</td><td>ค่าของ environment นี้</td><td>Supabase URL และ key</td></tr>
+              <tr><td>Cloud Environment</td><td>รันที่ไหน</td><td>Python, CPU, memory, storage</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <h2>ขั้นตอน Deploy (Example 1)</h2>
+          <ol>
+            <li>เตรียมและทดสอบไฟล์ในเครื่อง</li>
+            <li>Push ขึ้น GitHub repository</li>
+            <li>เปิด <b>share.streamlit.io</b> → Create app</li>
+            <li>เลือก repository, branch และ <code>main.py</code> (entrypoint)</li>
+            <li>Advanced settings (ไม่บังคับ): Python version → Deploy</li>
+            <li>เปิด URL แล้วทดสอบการใช้งาน</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h2>“It works on my machine”</h2>
+          <p>Cloud สร้าง Python environment ของตัวเอง <b>ไม่ได้คัดลอก</b> ของเราไป จึงต้องระบุ library ที่ใช้ใน <code>requirements.txt</code> (วางไว้ข้าง <code>main.py</code>) และควร <b>pin version</b> ที่ทดสอบแล้วเพื่อให้สร้าง environment ซ้ำได้</p>
+<pre><code class="txt"># requirements.txt (Helpdesk)
+streamlit
+pandas
+scikit-learn
+supabase</code></pre>
+        </div>
+
+        <div class="card">
+          <h2>Secrets: Local vs Cloud</h2>
+<pre><code class="py">url = st.secrets["supabase_url"]   # โค้ดเหมือนกันทั้งสองที่
+key = st.secrets["supabase_key"]</code></pre>
+          <div class="two-col">
+            <div class="mini"><b>Local</b><br><code>.streamlit/secrets.toml</code> และใส่ใน <code>.gitignore</code></div>
+            <div class="mini"><b>Community Cloud</b><br>Advanced settings → Secrets</div>
+          </div>
+          <div class="callout danger">ห้าม commit API key, password หรือ <code>secrets.toml</code> ขึ้น GitHub เปลี่ยนแค่ <b>ที่เก็บค่า</b> โค้ดยังใช้ <code>st.secrets</code></div>
+        </div>
+
+        <div class="card">
+          <h2>ความต่างระหว่าง Local กับ Cloud</h2>
+          <ul>
+            <li><b>Python version:</b> เลือกให้ตรงกับที่ทดสอบในเครื่อง</li>
+            <li><b>Libraries:</b> ระบุ package และตรวจ version</li>
+            <li><b>Secrets:</b> ใส่ค่าบน cloud แยกต่างหาก</li>
+            <li><b>File paths:</b> ไฟล์ต้องอยู่ใน repo ห้ามใช้ path เฉพาะเครื่อง</li>
+            <li><b>CPU/memory:</b> การ train และโมเดลใหญ่ใช้ทรัพยากรจำกัด</li>
+            <li><b>Storage:</b> ไฟล์บน cloud <b>ไม่รับประกันว่าคงอยู่</b> เก็บข้อมูลถาวรใน Supabase</li>
+          </ul>
+          <p class="flow-inline">Develop → Commit/Push → Deploy → Test → Fix → Push again (Cloud ดู branch ที่เลือกและอัปเดตแอปเองเมื่อ push)</p>
+        </div>
+
+        <div class="card">
+          <h2>แก้ปัญหา Deploy</h2>
+          <p>เริ่มจาก error message: <b>Manage app → Cloud logs</b></p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>อาการ</th><th>สาเหตุ/สิ่งที่ตรวจก่อน</th></tr></thead>
+            <tbody>
+              <tr><td>Module not found</td><td>ไม่ได้ใส่ใน <code>requirements.txt</code></td></tr>
+              <tr><td>เข้า Supabase ไม่ได้</td><td>secret ขาด/ผิด หรือ database access policy</td></tr>
+              <tr><td>ในเครื่องได้ บน cloud พัง</td><td>เทียบ Python, packages, secrets, resources</td></tr>
+              <tr><td>File not found</td><td>ไฟล์ไม่อยู่ใน repo, path ผิด, ตัวพิมพ์เล็ก/ใหญ่ไม่ตรง</td></tr>
+              <tr><td>แอปผิดตัวขึ้นมา</td><td>repository, branch หรือ entrypoint ผิด</td></tr>
+              <tr><td>พฤติกรรมเปลี่ยนหลัง deploy</td><td>version ของ Python/package ต่างกัน</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <h2>Deployment ≠ Production-Ready</h2>
+          <div class="three-col">
+            <div class="mini"><b>Security</b><br>Authentication, Authorization, Database security/RLS</div>
+            <div class="mini"><b>Operations</b><br>Monitoring/logging, Backup/recovery, Reliability</div>
+            <div class="mini"><b>Capacity</b><br>Scaling, CPU/memory/service limits, Cost</div>
+          </div>
+          <p class="muted">ทางเลือกอื่น: Render, AWS, Azure, GCP พร้อม container เช่น Docker</p>
+          <div class="callout">Applied AI ไม่ใช่แค่สร้างโมเดล แต่คือการสร้าง <b>ระบบรอบโมเดล</b> ที่คนใช้งานได้จริง</div>
+        </div>
+      </div>
+
+      <div class="view quiz" data-quiz="w13"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
